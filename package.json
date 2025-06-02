@@ -15,7 +15,8 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "morgan": "^1.10.0",
-    "multer": "^2.0.0"
+    "multer": "^2.0.0",
+    "serverless-http": "^3.0.0"
   },
   "devDependencies": {
     "prisma": "^6.8.2"
