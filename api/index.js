@@ -33,6 +33,4 @@ app.get('/api/test', async (req, res) => {
   }
 });
 
-// 5. Exportação CORRETA para Vercel
-const handler = serverless(app);
-module.exports = { handler }; // Formato que o Vercel espera
+module.exports = serverless(app);
