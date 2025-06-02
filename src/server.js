@@ -14,6 +14,10 @@ app.use(cors({
 app.use(express.json()); // ✅ para aceitar JSON
 app.use(morgan('dev'));  // ✅ logs
 
+app.get('/', (req, res) => {
+    res.send('Funcionou sapohha');
+});
+
 // ✅ Upload de imagem
 app.post('/upload', upload.single('file'), async (req, res) => {
   try {
