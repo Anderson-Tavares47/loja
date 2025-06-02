@@ -5,7 +5,15 @@ const morgan = require('morgan');
 const { PrismaClient } = require('@prisma/client');
 const serverless = require('serverless-http'); // necessário para Vercel
 
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ['query', 'error'],
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL, 
+    },
+  },
+});
 const app = express();
 const upload = multer();
 
