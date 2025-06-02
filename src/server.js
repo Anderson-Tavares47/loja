@@ -45,6 +45,26 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 });
 
 // ✅ Buscar imagem
+// app.get('/image/:id', async (req, res) => {
+//   try {
+//     const { id } = req.params;
+
+//     const image = await prisma.image.findUnique({
+//       where: { id: parseInt(id) },
+//     });
+
+//     if (!image) {
+//       return res.status(404).json({ error: 'Image not found' });
+//     }
+
+//     res.set('Content-Type', image.mimetype);
+//     res.send(image.data);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: 'Erro ao buscar imagem' });
+//   }
+// });
+
 app.get('/image/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -54,16 +74,20 @@ app.get('/image/:id', async (req, res) => {
     });
 
     if (!image) {
+      console.log(`❌ Image not found for ID ${id}`);
       return res.status(404).json({ error: 'Image not found' });
     }
 
+    console.log(`🟢 Servindo imagem ID ${id} - ${image.mimetype}, tamanho: ${image.data?.length}`);
+
     res.set('Content-Type', image.mimetype);
-    res.send(image.data);
+    res.send(Buffer.from(image.data)); // 🔒 Garante que é Buffer
   } catch (err) {
-    console.error(err);
+    console.error(`🔥 Erro ao buscar imagem ID ${req.params.id}:`, err);
     res.status(500).json({ error: 'Erro ao buscar imagem' });
   }
 });
+
 
 // ✅ Deletar imagem
 app.delete('/image/:id', async (req, res) => {
