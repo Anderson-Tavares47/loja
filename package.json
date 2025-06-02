@@ -19,7 +19,6 @@
    "serverless-http": "^3.0.0"
   },
   "devDependencies": {
-    "@vercel/node": "^2.15.3",
     "prisma": "^6.8.2"
   }
 }
