@@ -5,189 +5,132 @@ const morgan = require('morgan');
 const { PrismaClient } = require('@prisma/client');
 const serverless = require('serverless-http');
 
-// Configuração otimizada do Prisma
+// 1. Configuração otimizada do Prisma
 const prisma = new PrismaClient({
-  log: ['error'],
+  log: ['warn', 'error'],
   datasources: {
     db: {
-      url: process.env.DATABASE_URL, 
+      url: process.env.DATABASE_URL + (process.env.NODE_ENV === 'production' ? '?connection_limit=5' : ''),
     },
-  }
+  },
 });
 
 const app = express();
+
+// 2. Configuração do Multer com limites
 const upload = multer({
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB
-  }
+    fileSize: 5 * 1024 * 1024, // 5MB
+    files: 1
+  },
+  storage: multer.memoryStorage()
 });
 
-// Middlewares
+// 3. Middlewares otimizados
 app.use(cors({
-  origin: process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:3000' 
-    : 'https://seusite.com' // Substitua pelo seu domínio
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
-app.use(morgan('dev'));
 
-// Middleware de timeout alternativo para Vercel
-app.use((req, res, next) => {
-  const timeout = 8000; // 8 segundos
-  const timer = setTimeout(() => {
+app.use(express.json({ limit: '1mb' }));
+app.use(morgan('short'));
+
+// 4. Handler com timeout integrado
+const asyncHandler = (handler, timeoutMs = 8000) => async (req, res, next) => {
+  let timeout = setTimeout(() => {
     if (!res.headersSent) {
       res.status(504).json({ error: 'Request timeout' });
     }
-  }, timeout);
+  }, timeoutMs);
 
-  // Limpa o timeout quando a resposta é enviada
-  res.on('finish', () => clearTimeout(timer));
-  next();
-});
-
-// Rota de teste
-app.get('/', (req, res) => {
-  res.send('API funcionando');
-});
-
-// Função auxiliar para lidar com operações do Prisma
-async function handlePrismaOperation(res, operation) {
   try {
-    const result = await operation();
-    return result;
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro no servidor' });
-    return null;
-  } finally {
-    await prisma.$disconnect();
-  }
-}
-
-// Upload de imagem
-app.post('/upload', upload.single('file'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-
-  const result = await handlePrismaOperation(res, () => 
-    prisma.image.create({
-      data: {
-        filename: req.file.originalname,
-        mimetype: req.file.mimetype,
-        data: req.file.buffer,
-      },
-    })
-  );
-
-  if (result) res.status(201).json({ id: result.id });
-});
-
-// Obter imagem
-app.get('/image/:id', async (req, res) => {
-  const result = await handlePrismaOperation(res, () => 
-    prisma.image.findUnique({
-      where: { id: parseInt(req.params.id) },
-    })
-  );
-
-  if (!result) return res.status(404).json({ error: 'Image not found' });
-  
-  res.set('Content-Type', result.mimetype);
-  res.send(result.data);
-});
-
-// Rotas de produtos (padrão similar para outras rotas)
-app.get('/products', async (req, res) => {
-  const products = await handlePrismaOperation(res, () => 
-    prisma.product.findMany()
-  );
-  
-  if (products) res.json(products);
-});
-
-app.get('/products/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const product = await prisma.product.findUnique({
-      where: { id: parseInt(id) },
-    });
-
-    if (!product) return res.status(404).json({ error: 'Produto não encontrado' });
-
-    res.json(product);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao buscar produto' });
-  } finally {
-    await prisma.$disconnect();
-  }
-});
-
-app.post('/products', async (req, res) => {
-  try {
-    const { name, description, price, imageId } = req.body;
-
-    if (!name || !description || !price || !imageId) {
-      return res.status(400).json({ error: 'Campos obrigatórios faltando' });
+    await handler(req, res, next);
+  } catch (error) {
+    console.error('Handler error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' });
     }
-
-    const product = await prisma.product.create({
-      data: {
-        name,
-        description,
-        price: parseFloat(price),
-        imageId: parseInt(imageId),
-      },
-    });
-
-    res.status(201).json(product);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao criar produto' });
   } finally {
-    await prisma.$disconnect();
+    clearTimeout(timeout);
+    try {
+      await prisma.$disconnect();
+    } catch (disconnectError) {
+      console.error('Disconnection error:', disconnectError);
+    }
   }
+};
+
+// 5. Rotas otimizadas
+
+// Health Check (importante para Vercel)
+app.get('/.well-known/health', (req, res) => {
+  res.status(200).json({ status: 'healthy', timestamp: new Date() });
 });
 
-app.put('/products/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, description, price, imageId } = req.body;
-
-    const updated = await prisma.product.update({
-      where: { id: parseInt(id) },
-      data: {
-        name,
-        description,
-        price: parseFloat(price),
-        imageId: parseInt(imageId),
-      },
-    });
-
-    res.json(updated);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao atualizar produto' });
-  } finally {
-    await prisma.$disconnect();
+// Upload com tratamento de erro melhorado
+app.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Nenhum arquivo enviado' });
   }
+
+  const result = await prisma.image.create({
+    data: {
+      filename: req.file.originalname,
+      mimetype: req.file.mimetype,
+      data: req.file.buffer,
+    },
+    select: { id: true } // Apenas retorna o ID
+  });
+
+  res.status(201).json(result);
+}, 10000)); // 10s para uploads
+
+// Listagem de produtos com paginação
+app.get('/products', asyncHandler(async (req, res) => {
+  const { page = 1, limit = 20 } = req.query;
+  
+  const products = await prisma.product.findMany({
+    take: parseInt(limit),
+    skip: (parseInt(page) - 1) * parseInt(limit),
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      name: true,
+      price: true,
+      imageId: true
+    }
+  });
+
+  res.json({
+    data: products,
+    page: parseInt(page),
+    limit: parseInt(limit)
+  });
+}));
+
+// Detalhes do produto
+app.get('/products/:id', asyncHandler(async (req, res) => {
+  const product = await prisma.product.findUnique({
+    where: { id: parseInt(req.params.id) },
+    include: { image: { select: { mimetype: true } } }
+  });
+
+  if (!product) {
+    return res.status(404).json({ error: 'Produto não encontrado' });
+  }
+
+  res.json(product);
+}));
+
+// 6. Tratamento de erros global
+app.use((err, req, res, next) => {
+  console.error('Global error:', err);
+  res.status(500).json({ error: 'Ocorreu um erro inesperado' });
 });
 
-app.delete('/products/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    await prisma.product.delete({
-      where: { id: parseInt(id) },
-    });
-
-    res.status(204).end();
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao deletar produto' });
-  } finally {
-    await prisma.$disconnect();
-  }
+// 7. Exportação otimizada para Vercel
+module.exports.handler = serverless(app, {
+  binary: ['image/*', 'application/octet-stream'],
+  callbackWaitsForEmptyEventLoop: false
 });
-
-// Exportação para o Vercel
-module.exports = serverless(app);
