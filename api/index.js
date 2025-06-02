@@ -72,15 +72,33 @@ app.delete('/image/:id', async (req, res) => {
   }
 });
 
+// app.get('/products', async (req, res) => {
+//   try {
+//     const products = await prisma.product.findMany();
+//     res.json(products);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: 'Erro ao listar produtos' });
+//   }
+// });
+
 app.get('/products', async (req, res) => {
   try {
+    await prisma.$connect(); // 🔒 conecta explicitamente
+    console.log("✅ Conectado ao banco");
+
     const products = await prisma.product.findMany();
+    console.log("🟢 Produtos:", products.length);
+
     res.json(products);
   } catch (err) {
-    console.error(err);
+    console.error("❌ Erro ao listar produtos:", err);
     res.status(500).json({ error: 'Erro ao listar produtos' });
+  } finally {
+    await prisma.$disconnect(); // 🔓 desconecta após resposta
   }
 });
+
 
 app.get('/products/:id', async (req, res) => {
   try {
