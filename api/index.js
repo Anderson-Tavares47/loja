@@ -9,7 +9,10 @@ const prisma = new PrismaClient();
 const app = express();
 const upload = multer();
 
-app.use(cors({ origin: '*' }));
+app.use(cors({
+  origin: ['http://localhost:3000', 'https://loja-olive-mu.vercel.app'],
+}));
+
 app.use(express.json());
 app.use(morgan('dev'));
 
