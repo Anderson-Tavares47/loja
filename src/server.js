@@ -8,9 +8,11 @@ const prisma = new PrismaClient();
 const app = express();
 const upload = multer();
 
-app.use(cors({
-  origin: 'http://localhost:3000', // ou '*' se quiser liberar geral
-}));
+// app.use(cors({
+//   origin: 'http://localhost:3000', // ou '*' se quiser liberar geral
+// }));
+
+app.use(cors({ origin: '*' }));
 app.use(express.json()); // ✅ para aceitar JSON
 app.use(morgan('dev'));  // ✅ logs
 
