@@ -9,8 +9,14 @@ const app = express();
 const upload = multer();
 
 app.use(cors({
-  origin: 'http://localhost:1107', 'loja-front-one.vercel.app', 'https://lojaauchic.com.br/', 'www.https://www.lojaauchic.com.br/' // ou '*' se quiser liberar geral
+  origin: [
+    'http://localhost:1107',
+    'https://loja-front-one.vercel.app',
+    'https://lojaauchic.com.br',
+    'https://www.lojaauchic.com.br'
+  ]
 }));
+
 
 // app.use(cors({ origin: '*' }));
 app.use(express.json()); // ✅ para aceitar JSON
