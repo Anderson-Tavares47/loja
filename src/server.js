@@ -123,9 +123,33 @@ app.get('/products', async (req, res) => {
 });
 
 // ✅ Obter produto por ID
+// app.get('/products/:id', async (req, res) => {
+//   try {
+//     const { id } = req.params;
+
+//     const product = await prisma.product.findUnique({
+//       where: { id: parseInt(id) },
+//     });
+
+//     if (!product) {
+//       return res.status(404).json({ error: 'Produto não encontrado' });
+//     }
+
+//     res.json(product);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: 'Erro ao buscar produto' });
+//   }
+// });
+
+
 app.get('/products/:id', async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!id || isNaN(parseInt(id))) {
+      return res.status(400).json({ error: 'ID inválido ou ausente' });
+    }
 
     const product = await prisma.product.findUnique({
       where: { id: parseInt(id) },
@@ -141,6 +165,7 @@ app.get('/products/:id', async (req, res) => {
     res.status(500).json({ error: 'Erro ao buscar produto' });
   }
 });
+
 
 // ✅ Criar produto
 app.post('/products', async (req, res) => {
