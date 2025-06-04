@@ -2,6 +2,7 @@ const cors = require('cors');
 const express = require('express');
 const multer = require('multer');
 const morgan = require('morgan');
+const { param, validationResult } = require('express-validator');
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
@@ -143,28 +144,32 @@ app.get('/products', async (req, res) => {
 // });
 
 
-app.get('/products/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    if (!id || isNaN(parseInt(id))) {
-      return res.status(400).json({ error: 'ID inválido ou ausente' });
+app.get('/products/:id',
+  param('id').isInt().withMessage('ID deve ser um número inteiro'),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    const product = await prisma.product.findUnique({
-      where: { id: parseInt(id) },
-    });
+    const id = parseInt(req.params.id, 10);
+    try {
+      const product = await prisma.product.findUnique({
+        where: { id },
+      });
 
-    if (!product) {
-      return res.status(404).json({ error: 'Produto não encontrado' });
+      if (!product) {
+        return res.status(404).json({ error: 'Produto não encontrado' });
+      }
+
+      res.json(product);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Erro ao buscar produto' });
     }
-
-    res.json(product);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao buscar produto' });
   }
-});
+);
+
 
 
 // ✅ Criar produto
