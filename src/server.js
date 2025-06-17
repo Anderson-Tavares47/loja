@@ -248,6 +248,7 @@ app.put('/products/:id', async (req, res) => {
 });
 
 
+
 // ✅ Deletar produto
 app.delete('/products/:id', async (req, res) => {
   try {
