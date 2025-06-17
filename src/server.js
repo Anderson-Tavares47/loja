@@ -198,19 +198,46 @@ app.post('/products', async (req, res) => {
 });
 
 // ✅ Atualizar produto
+// app.put('/products/:id', async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const { name, description, price, imageId } = req.body;
+
+//     const updated = await prisma.product.update({
+//       where: { id: parseInt(id) },
+//       data: {
+//         name,
+//         description,
+//         price: parseFloat(price),
+//         imageId: parseInt(imageId),
+//       },
+//     });
+
+//     res.json(updated);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: 'Erro ao atualizar produto' });
+//   }
+// });
+
 app.put('/products/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, price, imageId } = req.body;
 
+    const data: any = {
+      name,
+      description,
+      price: parseFloat(price),
+    };
+
+    if (imageId !== undefined && imageId !== null) {
+      data.imageId = parseInt(imageId);
+    }
+
     const updated = await prisma.product.update({
       where: { id: parseInt(id) },
-      data: {
-        name,
-        description,
-        price: parseFloat(price),
-        imageId: parseInt(imageId),
-      },
+      data,
     });
 
     res.json(updated);
@@ -219,6 +246,7 @@ app.put('/products/:id', async (req, res) => {
     res.status(500).json({ error: 'Erro ao atualizar produto' });
   }
 });
+
 
 // ✅ Deletar produto
 app.delete('/products/:id', async (req, res) => {
