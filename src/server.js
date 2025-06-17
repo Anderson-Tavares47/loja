@@ -225,12 +225,13 @@ app.put('/products/:id', async (req, res) => {
     const { id } = req.params;
     const { name, description, price, imageId } = req.body;
 
-    const data: any = {
+    const data = {
       name,
       description,
       price: parseFloat(price),
     };
 
+    // Só inclui imageId se for válido
     if (imageId !== undefined && imageId !== null) {
       data.imageId = parseInt(imageId);
     }
@@ -246,6 +247,7 @@ app.put('/products/:id', async (req, res) => {
     res.status(500).json({ error: 'Erro ao atualizar produto' });
   }
 });
+
 
 
 
